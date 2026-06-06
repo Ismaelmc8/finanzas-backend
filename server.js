@@ -1,6 +1,7 @@
 // server.js
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import sequelize from "./config/db.js";
 import transaccionesRoutes from './routes/transacciones.js';
@@ -19,8 +20,10 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }));
 app.use(express.json());
+app.use(cookieParser());
 app.use((req, res, next) => {
   if (req.url.startsWith("/api")) {
     req.url = req.url.replace(/^\/api/, ""); // 👈 elimina solo el prefijo inicial /api
