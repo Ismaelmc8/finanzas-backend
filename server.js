@@ -13,6 +13,7 @@ import traspasosRoutes from "./routes/traspasos.js";
 import invitacionesRoutes from "./routes/invitaciones.js";
 import categoriasRoutes   from "./routes/categorias.js";
 import presupuestosRoutes from "./routes/presupuestos.js";
+import dashboardRoutes    from "./routes/dashboard.js";
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -42,6 +43,7 @@ app.use("/traspasos",    traspasosRoutes);
 app.use("/invitaciones", invitacionesRoutes);
 app.use("/categorias",   categoriasRoutes);
 app.use("/presupuestos", presupuestosRoutes);
+app.use("/dashboard",    dashboardRoutes);
 
 app.use(errorHandler);
 
