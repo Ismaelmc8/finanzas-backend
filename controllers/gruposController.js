@@ -1,59 +1,51 @@
 import { Grupo } from "../models/Loader.js";
+import { NotFoundError } from "../errors/index.js";
 
-export const crearGrupo = async (req, res) => {
+export const crearGrupo = async (req, res, next) => {
   try {
     const nuevo = await Grupo.create(req.body);
     res.status(201).json(nuevo);
   } catch (error) {
-    console.error('[grupos] crearGrupo:', error);
-    res.status(500).json({ error: "Error interno del servidor" });
+    next(error);
   }
 };
 
-export const obtenerGrupos = async (req, res) => {
+export const obtenerGrupos = async (req, res, next) => {
   try {
     const grupos = await Grupo.findAll();
     res.json(grupos);
   } catch (error) {
-    console.error('[grupos] obtenerGrupos:', error);
-    res.status(500).json({ error: "Error interno del servidor" });
+    next(error);
   }
 };
 
-export const obtenerGrupo = async (req, res) => {
+export const obtenerGrupo = async (req, res, next) => {
   try {
     const grupo = await Grupo.findByPk(req.params.id);
-    if (!grupo) return res.status(404).json({ error: "Grupo no encontrado" });
+    if (!grupo) throw new NotFoundError('Grupo no encontrado');
     res.json(grupo);
   } catch (error) {
-    console.error('[grupos] obtenerGrupo:', error);
-    res.status(500).json({ error: "Error interno del servidor" });
+    next(error);
   }
 };
 
-export const actualizarGrupo = async (req, res) => {
+export const actualizarGrupo = async (req, res, next) => {
   try {
-    const [updated] = await Grupo.update(req.body, {
-      where: { id: req.params.id },
-    });
-    if (!updated) return res.status(404).json({ error: "Grupo no encontrado" });
+    const [updated] = await Grupo.update(req.body, { where: { id: req.params.id } });
+    if (!updated) throw new NotFoundError('Grupo no encontrado');
     const grupoActualizado = await Grupo.findByPk(req.params.id);
     res.json(grupoActualizado);
   } catch (error) {
-    console.error('[grupos] actualizarGrupo:', error);
-    res.status(500).json({ error: "Error interno del servidor" });
+    next(error);
   }
 };
 
-export const eliminarGrupo = async (req, res) => {
+export const eliminarGrupo = async (req, res, next) => {
   try {
-    const deleted = await Grupo.destroy({
-      where: { id: req.params.id },
-    });
-    if (!deleted) return res.status(404).json({ error: "Grupo no encontrado" });
-    res.json({ mensaje: "Grupo eliminado" });
+    const deleted = await Grupo.destroy({ where: { id: req.params.id } });
+    if (!deleted) throw new NotFoundError('Grupo no encontrado');
+    res.json({ mensaje: 'Grupo eliminado' });
   } catch (error) {
-    console.error('[grupos] eliminarGrupo:', error);
-    res.status(500).json({ error: "Error interno del servidor" });
+    next(error);
   }
 };

@@ -14,4 +14,6 @@ const fileFilter = (req, file, cb) => {
   cb(null, allowed.includes(ext));
 };
 
-export default multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
+const maxSizeBytes = (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024;
+
+export default multer({ storage, fileFilter, limits: { fileSize: maxSizeBytes } });

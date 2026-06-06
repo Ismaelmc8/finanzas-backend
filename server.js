@@ -5,8 +5,8 @@ import dotenv from 'dotenv';
 import sequelize from "./config/db.js";
 import transaccionesRoutes from './routes/transacciones.js';
 import authRoutes from './routes/authentication.js';
-import Usuario from "./models/Usuario.js";
 import gruposRoutes from "./routes/grupos.js";
+import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
 const app = express();
@@ -27,6 +27,8 @@ app.use((req, res, next) => {
 app.use('/auth', authRoutes);
 app.use('/expenses', transaccionesRoutes);
 app.use("/groups-expenses", gruposRoutes);
+
+app.use(errorHandler);
 
 sequelize.authenticate()
     .then(() => {
