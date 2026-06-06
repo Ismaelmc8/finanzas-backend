@@ -1,21 +1,18 @@
-// models/Transaccion.js
 import { DataTypes } from "sequelize";
 
 export const TransaccionModel = (sequelize) => {
-  const Transaccion = sequelize.define("Transaccion", {
-    name: DataTypes.STRING,
-    units: DataTypes.INTEGER,
-    price: DataTypes.FLOAT,
-    total: DataTypes.FLOAT,
-    type: DataTypes.ENUM("ingreso", "gasto"),
-    category: DataTypes.STRING,
-    date: DataTypes.DATE,
-    notes: DataTypes.TEXT,
+  return sequelize.define("Transaccion", {
+    id:       { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    name:     { type: DataTypes.STRING },
+    units:    { type: DataTypes.FLOAT },
+    price:    { type: DataTypes.FLOAT },
+    total:    { type: DataTypes.FLOAT },
+    type:     { type: DataTypes.ENUM("ingreso", "gasto") },
+    category: { type: DataTypes.STRING },
+    date:     { type: DataTypes.DATE },
+    notes:    { type: DataTypes.TEXT },
+    groupId:  { type: DataTypes.INTEGER, allowNull: true },  // legacy
+    cuentaId: { type: DataTypes.INTEGER, allowNull: true },
+    userId:   { type: DataTypes.INTEGER, allowNull: true },
   });
-
-  Transaccion.associate = (models) => {
-    Transaccion.belongsTo(models.Grupo, { foreignKey: "groupId", as: "grupo" });
-  };
-
-  return Transaccion;
 };

@@ -3,6 +3,17 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { ValidationError } from "../errors/index.js";
 
+export const getMe = async (req, res, next) => {
+  try {
+    const usuario = await Usuario.findByPk(req.user.id, {
+      attributes: ["id", "nombre", "email", "creado_en"],
+    });
+    res.json(usuario);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const register = async (req, res, next) => {
   try {
     const { nombre, email, password } = req.body;

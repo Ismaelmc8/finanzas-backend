@@ -1,17 +1,33 @@
 import sequelize from "../config/db.js";
 import { GrupoModel } from "./Grupo.js";
 import { TransaccionModel } from "./Transaccion.js";
+import { BancoModel } from "./Banco.js";
+import { CuentaModel } from "./Cuenta.js";
+import Usuario from "./Usuario.js";
 
-// Inicializar modelos
-const Grupo = GrupoModel(sequelize);
+const Grupo      = GrupoModel(sequelize);
 const Transaccion = TransaccionModel(sequelize);
+const Banco      = BancoModel(sequelize);
+const Cuenta     = CuentaModel(sequelize);
 
-// Guardamos en un objeto para pasarlo a associate
-const models = { Grupo, Transaccion };
+// Banco ↔ Usuario
+Usuario.hasMany(Banco,   { foreignKey: "userId", onDelete: "CASCADE" });
+Banco.belongsTo(Usuario, { foreignKey: "userId" });
 
-// Ejecutar las asociaciones definidas en cada modelo
-Object.values(models).forEach((model) => {
-  if (model.associate) model.associate(models);
-});
+// Cuenta ↔ Banco
+Banco.hasMany(Cuenta,    { foreignKey: "bancoId", as: "cuentas", onDelete: "CASCADE" });
+Cuenta.belongsTo(Banco,  { foreignKey: "bancoId", as: "banco" });
 
-export { sequelize, models, Grupo, Transaccion };
+// Cuenta ↔ Usuario
+Usuario.hasMany(Cuenta,   { foreignKey: "userId" });
+Cuenta.belongsTo(Usuario, { foreignKey: "userId" });
+
+// Transaccion ↔ Cuenta
+Cuenta.hasMany(Transaccion,     { foreignKey: "cuentaId", as: "transacciones", onDelete: "CASCADE" });
+Transaccion.belongsTo(Cuenta,   { foreignKey: "cuentaId", as: "cuenta" });
+
+// Transaccion ↔ Grupo (legacy)
+Grupo.hasMany(Transaccion,      { foreignKey: "groupId", as: "transaccionesGrupo" });
+Transaccion.belongsTo(Grupo,    { foreignKey: "groupId", as: "grupo" });
+
+export { sequelize, Grupo, Transaccion, Banco, Cuenta, Usuario };
