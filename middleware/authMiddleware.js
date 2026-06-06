@@ -1,13 +1,16 @@
 import jwt from "jsonwebtoken";
 
-const SECRET = process.env.AUTH_KEY; 
+const SECRET = process.env.JWT_SECRET;
 
 export const authMiddleware = (req, res, next) => {
-  const token = req.headers["authorization"];
-  if (!token) return res.status(403).json({ error: "Token requerido" });
+  const authHeader = req.headers["authorization"];
+  if (!authHeader) return res.status(403).json({ error: "Token requerido" });
+
+  const token = authHeader.split(" ")[1];
+  if (!token) return res.status(403).json({ error: "Formato de token inválido" });
 
   try {
-    const decoded = jwt.verify(token.split(" ")[1], SECRET);
+    const decoded = jwt.verify(token, SECRET);
     req.user = decoded;
     next();
   } catch (err) {

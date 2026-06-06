@@ -1,23 +1,25 @@
 // routes/transacciones.js
+import upload from '../middleware/uploadMiddleware.js';
 import express from 'express';
-import { 
-  crearTransaccion, 
-  obtenerTransacciones, 
-  obtenerTransaccion, 
-  actualizarTransaccion, 
-  eliminarTransaccion 
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import {
+  crearTransaccion,
+  obtenerTransacciones,
+  obtenerTransaccion,
+  actualizarTransaccion,
+  eliminarTransaccion,
+  importarTransacciones
 } from '../controllers/transaccionesController.js';
 
 const router = express.Router();
 
-router.post('/', crearTransaccion);           // Crear
-router.get('/', obtenerTransacciones);        // Listar todas
-router.get('/:id', obtenerTransaccion);       // Obtener por ID
-router.put('/:id', actualizarTransaccion);    // Actualizar
-router.delete('/:id', eliminarTransaccion);  // Eliminar
+router.use(authMiddleware);
 
-router.get('/prueba', (req, res) => {
-    res.json({ mensaje: 'La API funciona correctamente!' });
-});
+router.post('/', crearTransaccion);
+router.get('/', obtenerTransacciones);
+router.get('/:id', obtenerTransaccion);
+router.put('/:id', actualizarTransaccion);
+router.delete('/:id', eliminarTransaccion);
+router.post('/import', upload.single('file'), importarTransacciones);
 
 export default router;
