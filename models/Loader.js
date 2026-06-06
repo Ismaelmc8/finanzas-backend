@@ -4,6 +4,8 @@ import { TransaccionModel } from "./Transaccion.js";
 import { BancoModel } from "./Banco.js";
 import { CuentaModel } from "./Cuenta.js";
 import { RefreshTokenModel } from "./RefreshToken.js";
+import { CuentaAccesoModel } from "./CuentaAcceso.js";
+import { CategoriaModel } from "./Categoria.js";
 import Usuario from "./Usuario.js";
 
 const Grupo        = GrupoModel(sequelize);
@@ -11,6 +13,8 @@ const Transaccion  = TransaccionModel(sequelize);
 const Banco        = BancoModel(sequelize);
 const Cuenta       = CuentaModel(sequelize);
 const RefreshToken = RefreshTokenModel(sequelize);
+const CuentaAcceso = CuentaAccesoModel(sequelize);
+const Categoria    = CategoriaModel(sequelize);
 
 // Banco ↔ Usuario
 Usuario.hasMany(Banco,   { foreignKey: "userId", onDelete: "CASCADE" });
@@ -36,4 +40,18 @@ Transaccion.belongsTo(Grupo,    { foreignKey: "groupId", as: "grupo" });
 Usuario.hasMany(RefreshToken,   { foreignKey: "userId", onDelete: "CASCADE" });
 RefreshToken.belongsTo(Usuario, { foreignKey: "userId" });
 
-export { sequelize, Grupo, Transaccion, Banco, Cuenta, Usuario, RefreshToken };
+// CuentaAcceso ↔ Cuenta / Usuario
+Cuenta.hasMany(CuentaAcceso,    { foreignKey: "cuentaId", as: "accesos", onDelete: "CASCADE" });
+CuentaAcceso.belongsTo(Cuenta,  { foreignKey: "cuentaId", as: "cuenta" });
+CuentaAcceso.belongsTo(Usuario, { foreignKey: "userId",      as: "invitado" });
+CuentaAcceso.belongsTo(Usuario, { foreignKey: "invitadoPor", as: "propietarioAcceso" });
+// Alias adicional para obtener el propietario de la cuenta desde includes
+Cuenta.belongsTo(Usuario,       { foreignKey: "userId", as: "propietario" });
+
+// Categoria ↔ Usuario / self-join
+Usuario.hasMany(Categoria,    { foreignKey: "userId", onDelete: "CASCADE" });
+Categoria.belongsTo(Usuario,  { foreignKey: "userId" });
+Categoria.belongsTo(Categoria, { as: "padre",         foreignKey: "parentId" });
+Categoria.hasMany(Categoria,   { as: "subcategorias",  foreignKey: "parentId" });
+
+export { sequelize, Grupo, Transaccion, Banco, Cuenta, Usuario, RefreshToken, CuentaAcceso, Categoria };

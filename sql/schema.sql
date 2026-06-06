@@ -139,3 +139,48 @@ CREATE TABLE IF NOT EXISTS `refresh_tokens` (
     FOREIGN KEY (`userId`) REFERENCES `usuarios` (`id`)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------------
+-- 8. categorias  (EV-04)
+--    · parentId NULL → categoría raíz; parentId = id padre → subcategoría
+--    · Máximo dos niveles (validado en el controller)
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `categorias` (
+  `id`        INT          NOT NULL AUTO_INCREMENT,
+  `nombre`    VARCHAR(255) NOT NULL,
+  `tipo`      ENUM('ingreso','gasto','ambos') NOT NULL DEFAULT 'gasto',
+  `color`     VARCHAR(7)   NOT NULL DEFAULT '#6366f1',
+  `icono`     VARCHAR(10)  NOT NULL DEFAULT '📦',
+  `parentId`  INT          DEFAULT NULL,
+  `userId`    INT          NOT NULL,
+  `activa`    TINYINT(1)   NOT NULL DEFAULT 1,
+  `createdAt` DATETIME     NOT NULL,
+  `updatedAt` DATETIME     NOT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_categoria_padre`
+    FOREIGN KEY (`parentId`) REFERENCES `categorias` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_categoria_usuario`
+    FOREIGN KEY (`userId`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------------
+-- 7. cuenta_accesos  (EV-03)
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `cuenta_accesos` (
+  `id`          INT     NOT NULL AUTO_INCREMENT,
+  `cuentaId`    INT     NOT NULL,
+  `userId`      INT     NOT NULL,
+  `invitadoPor` INT     NOT NULL,
+  `rol`         ENUM('editor','lector') NOT NULL,
+  `estado`      ENUM('pendiente','aceptado','rechazado') NOT NULL DEFAULT 'pendiente',
+  `createdAt`   DATETIME NOT NULL,
+  `updatedAt`   DATETIME NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_cuenta_usuario` (`cuentaId`, `userId`),
+  CONSTRAINT `fk_accesos_cuenta`
+    FOREIGN KEY (`cuentaId`) REFERENCES `cuentas` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_accesos_invitado`
+    FOREIGN KEY (`userId`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_accesos_propietario`
+    FOREIGN KEY (`invitadoPor`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

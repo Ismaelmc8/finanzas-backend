@@ -1,5 +1,5 @@
 import { Transaccion, Cuenta } from '../models/Loader.js';
-import { recalcularBalance } from './cuentasController.js';
+import { recalcularBalance, verificarAccesoCuenta } from './cuentasController.js';
 import fs from 'fs';
 import { procesarExcelTransacciones } from '../services/excelImportService.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../errors/index.js';
@@ -9,9 +9,7 @@ export const crearTransaccion = async (req, res, next) => {
     const { units, price, cuentaId } = req.body;
 
     if (cuentaId) {
-      const cuenta = await Cuenta.findByPk(cuentaId);
-      if (!cuenta) throw new NotFoundError('Cuenta no encontrada');
-      if (cuenta.userId !== req.user.id) throw new ForbiddenError();
+      await verificarAccesoCuenta(req.user.id, cuentaId, 'editor');
     }
 
     const total = units * price;
@@ -27,8 +25,16 @@ export const crearTransaccion = async (req, res, next) => {
 
 export const obtenerTransacciones = async (req, res, next) => {
   try {
-    const where = { userId: req.user.id };
-    if (req.query.cuentaId) where.cuentaId = req.query.cuentaId;
+    const { cuentaId } = req.query;
+    let where;
+
+    if (cuentaId) {
+      // Verifica acceso (lector o superior) y devuelve todas las transacciones de la cuenta
+      await verificarAccesoCuenta(req.user.id, cuentaId, 'lector');
+      where = { cuentaId };
+    } else {
+      where = { userId: req.user.id };
+    }
 
     const transacciones = await Transaccion.findAll({
       where,
@@ -44,7 +50,13 @@ export const obtenerTransaccion = async (req, res, next) => {
   try {
     const transaccion = await Transaccion.findByPk(req.params.id);
     if (!transaccion) throw new NotFoundError('Transacción no encontrada');
-    if (transaccion.userId !== req.user.id) throw new ForbiddenError();
+
+    if (transaccion.cuentaId) {
+      await verificarAccesoCuenta(req.user.id, transaccion.cuentaId, 'lector');
+    } else if (transaccion.userId !== req.user.id) {
+      throw new ForbiddenError();
+    }
+
     res.json(transaccion);
   } catch (error) {
     next(error);
@@ -55,7 +67,12 @@ export const actualizarTransaccion = async (req, res, next) => {
   try {
     const transaccion = await Transaccion.findByPk(req.params.id);
     if (!transaccion) throw new NotFoundError('Transacción no encontrada');
-    if (transaccion.userId !== req.user.id) throw new ForbiddenError();
+
+    if (transaccion.cuentaId) {
+      await verificarAccesoCuenta(req.user.id, transaccion.cuentaId, 'editor');
+    } else if (transaccion.userId !== req.user.id) {
+      throw new ForbiddenError();
+    }
 
     const { units, price } = req.body;
     const total = units * price;
@@ -77,7 +94,12 @@ export const eliminarTransaccion = async (req, res, next) => {
   try {
     const transaccion = await Transaccion.findByPk(req.params.id);
     if (!transaccion) throw new NotFoundError('Transacción no encontrada');
-    if (transaccion.userId !== req.user.id) throw new ForbiddenError();
+
+    if (transaccion.cuentaId) {
+      await verificarAccesoCuenta(req.user.id, transaccion.cuentaId, 'editor');
+    } else if (transaccion.userId !== req.user.id) {
+      throw new ForbiddenError();
+    }
 
     const cuentaId = transaccion.cuentaId;
     await transaccion.destroy();
@@ -96,9 +118,7 @@ export const importarTransacciones = async (req, res, next) => {
     const { cuentaId } = req.body;
 
     if (cuentaId) {
-      const cuenta = await Cuenta.findByPk(cuentaId);
-      if (!cuenta) throw new NotFoundError('Cuenta no encontrada');
-      if (cuenta.userId !== req.user.id) throw new ForbiddenError();
+      await verificarAccesoCuenta(req.user.id, cuentaId, 'editor');
     }
 
     const transacciones = procesarExcelTransacciones(req.file.path);
