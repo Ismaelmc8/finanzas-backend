@@ -3,8 +3,21 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { Op } from "sequelize";
 import Usuario from "../models/Usuario.js";
-import { RefreshToken } from "../models/Loader.js";
+import { RefreshToken, Categoria } from "../models/Loader.js";
+import { CATEGORIAS_DEFAULT } from "../data/categorias-default.js";
 import { ValidationError, UnauthorizedError, NotFoundError } from "../errors/index.js";
+
+export const seedCategorias = async (userId) => {
+  for (const def of CATEGORIAS_DEFAULT) {
+    const { subcategorias = [], ...datos } = def;
+    const raiz = await Categoria.create({ ...datos, userId });
+    if (subcategorias.length) {
+      await Categoria.bulkCreate(
+        subcategorias.map((s) => ({ ...s, parentId: raiz.id, userId }))
+      );
+    }
+  }
+};
 
 const ACCESS_TOKEN_TTL  = "15m";
 const REFRESH_TOKEN_DAYS = 30;
@@ -57,6 +70,8 @@ export const register = async (req, res, next) => {
 
     const password_hash = await bcrypt.hash(password, 10);
     const usuario = await Usuario.create({ nombre, email, password_hash });
+
+    await seedCategorias(usuario.id);
 
     res.status(201).json({
       mensaje: "Usuario registrado con éxito",
