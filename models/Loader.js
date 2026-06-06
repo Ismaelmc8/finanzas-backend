@@ -6,6 +6,7 @@ import { CuentaModel } from "./Cuenta.js";
 import { RefreshTokenModel } from "./RefreshToken.js";
 import { CuentaAccesoModel } from "./CuentaAcceso.js";
 import { CategoriaModel } from "./Categoria.js";
+import { PresupuestoModel } from "./Presupuesto.js";
 import Usuario from "./Usuario.js";
 
 const Grupo        = GrupoModel(sequelize);
@@ -15,6 +16,7 @@ const Cuenta       = CuentaModel(sequelize);
 const RefreshToken = RefreshTokenModel(sequelize);
 const CuentaAcceso = CuentaAccesoModel(sequelize);
 const Categoria    = CategoriaModel(sequelize);
+const Presupuesto  = PresupuestoModel(sequelize);
 
 // Banco ↔ Usuario
 Usuario.hasMany(Banco,   { foreignKey: "userId", onDelete: "CASCADE" });
@@ -54,4 +56,10 @@ Categoria.belongsTo(Usuario,  { foreignKey: "userId" });
 Categoria.belongsTo(Categoria, { as: "padre",         foreignKey: "parentId" });
 Categoria.hasMany(Categoria,   { as: "subcategorias",  foreignKey: "parentId" });
 
-export { sequelize, Grupo, Transaccion, Banco, Cuenta, Usuario, RefreshToken, CuentaAcceso, Categoria };
+// Presupuesto ↔ Usuario / Categoria / Cuenta
+Usuario.hasMany(Presupuesto,    { foreignKey: "userId",      onDelete: "CASCADE" });
+Presupuesto.belongsTo(Usuario,  { foreignKey: "userId" });
+Presupuesto.belongsTo(Categoria,{ foreignKey: "categoriaId", as: "categoria" });
+Presupuesto.belongsTo(Cuenta,   { foreignKey: "cuentaId",    as: "cuenta" });
+
+export { sequelize, Grupo, Transaccion, Banco, Cuenta, Usuario, RefreshToken, CuentaAcceso, Categoria, Presupuesto };

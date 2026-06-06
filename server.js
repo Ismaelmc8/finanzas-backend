@@ -11,7 +11,8 @@ import bancosRoutes from "./routes/bancos.js";
 import cuentasRoutes from "./routes/cuentas.js";
 import traspasosRoutes from "./routes/traspasos.js";
 import invitacionesRoutes from "./routes/invitaciones.js";
-import categoriasRoutes from "./routes/categorias.js";
+import categoriasRoutes   from "./routes/categorias.js";
+import presupuestosRoutes from "./routes/presupuestos.js";
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -39,7 +40,8 @@ app.use("/bancos", bancosRoutes);
 app.use("/cuentas", cuentasRoutes);
 app.use("/traspasos",    traspasosRoutes);
 app.use("/invitaciones", invitacionesRoutes);
-app.use("/categorias",  categoriasRoutes);
+app.use("/categorias",   categoriasRoutes);
+app.use("/presupuestos", presupuestosRoutes);
 
 app.use(errorHandler);
 

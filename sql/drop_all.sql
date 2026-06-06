@@ -8,6 +8,7 @@ USE `finanzas_db`;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS `presupuestos`;
 DROP TABLE IF EXISTS `cuenta_accesos`;
 DROP TABLE IF EXISTS `categorias`;
 DROP TABLE IF EXISTS `refresh_tokens`;

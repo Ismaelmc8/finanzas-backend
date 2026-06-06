@@ -164,6 +164,29 @@ CREATE TABLE IF NOT EXISTS `categorias` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------
+-- 9. presupuestos  (EV-05)
+--    · cuentaId NULL → aplica a todas las cuentas del usuario
+--    · El gasto real se calcula en el controller por mes/año
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `presupuestos` (
+  `id`          INT     NOT NULL AUTO_INCREMENT,
+  `userId`      INT     NOT NULL,
+  `categoriaId` INT     NOT NULL,
+  `importe`     FLOAT   NOT NULL,
+  `cuentaId`    INT     DEFAULT NULL,
+  `createdAt`   DATETIME NOT NULL,
+  `updatedAt`   DATETIME NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_presupuesto` (`userId`, `categoriaId`, `cuentaId`),
+  CONSTRAINT `fk_presupuesto_usuario`
+    FOREIGN KEY (`userId`)      REFERENCES `usuarios`   (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_presupuesto_categoria`
+    FOREIGN KEY (`categoriaId`) REFERENCES `categorias` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_presupuesto_cuenta`
+    FOREIGN KEY (`cuentaId`)    REFERENCES `cuentas`    (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------------
 -- 7. cuenta_accesos  (EV-03)
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `cuenta_accesos` (
