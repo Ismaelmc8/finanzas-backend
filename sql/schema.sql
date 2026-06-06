@@ -86,6 +86,8 @@ CREATE TABLE IF NOT EXISTS `cuentas` (
 --    · cuentaId         → cuenta propietaria (nuevo)
 --    · groupId          → Grupo legacy (nullable)
 --    · userId           → desnormalizado para queries rápidas
+--    · recurrente       → plantilla de recurrencia (EV-06)
+--    · recurrenciaId    → apunta a la plantilla original (EV-06)
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `Transaccions` (
   `id`            INT             NOT NULL AUTO_INCREMENT,
@@ -101,6 +103,10 @@ CREATE TABLE IF NOT EXISTS `Transaccions` (
   `cuentaId`      INT                      DEFAULT NULL,
   `userId`        INT                      DEFAULT NULL,
   `traspasoParId` INT                      DEFAULT NULL,
+  `recurrente`    TINYINT(1)               NOT NULL DEFAULT 0,
+  `frecuencia`    ENUM('diario','semanal','mensual','anual') DEFAULT NULL,
+  `proximaFecha`  DATETIME                 DEFAULT NULL,
+  `recurrenciaId` INT                      DEFAULT NULL,
   `createdAt`     DATETIME        NOT NULL,
   `updatedAt`     DATETIME        NOT NULL,
   PRIMARY KEY (`id`),

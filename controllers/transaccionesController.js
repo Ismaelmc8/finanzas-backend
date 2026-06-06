@@ -1,19 +1,40 @@
+import { Op } from 'sequelize';
 import { Transaccion, Cuenta } from '../models/Loader.js';
 import { recalcularBalance, verificarAccesoCuenta } from './cuentasController.js';
 import fs from 'fs';
 import { procesarExcelTransacciones } from '../services/excelImportService.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../errors/index.js';
 
+function calcularProximaFecha(date, frecuencia) {
+  const d = new Date(date);
+  switch (frecuencia) {
+    case 'diario':  d.setDate(d.getDate() + 1);          break;
+    case 'semanal': d.setDate(d.getDate() + 7);          break;
+    case 'mensual': d.setMonth(d.getMonth() + 1);        break;
+    case 'anual':   d.setFullYear(d.getFullYear() + 1);  break;
+  }
+  return d;
+}
+
 export const crearTransaccion = async (req, res, next) => {
   try {
-    const { units, price, cuentaId } = req.body;
+    const { units, price, cuentaId, recurrente, frecuencia, date } = req.body;
+
+    if (recurrente && !frecuencia) throw new ValidationError('La frecuencia es obligatoria para transacciones recurrentes');
 
     if (cuentaId) {
       await verificarAccesoCuenta(req.user.id, cuentaId, 'editor');
     }
 
     const total = units * price;
-    const nueva = await Transaccion.create({ ...req.body, total, userId: req.user.id });
+    const proximaFecha = recurrente ? calcularProximaFecha(date, frecuencia) : null;
+
+    const nueva = await Transaccion.create({
+      ...req.body,
+      total,
+      proximaFecha,
+      userId: req.user.id,
+    });
 
     if (cuentaId) await recalcularBalance(cuentaId);
 
@@ -29,7 +50,6 @@ export const obtenerTransacciones = async (req, res, next) => {
     let where;
 
     if (cuentaId) {
-      // Verifica acceso (lector o superior) y devuelve todas las transacciones de la cuenta
       await verificarAccesoCuenta(req.user.id, cuentaId, 'lector');
       where = { cuentaId };
     } else {
@@ -74,11 +94,15 @@ export const actualizarTransaccion = async (req, res, next) => {
       throw new ForbiddenError();
     }
 
-    const { units, price } = req.body;
+    const { units, price, recurrente, frecuencia, date } = req.body;
+
+    if (recurrente && !frecuencia) throw new ValidationError('La frecuencia es obligatoria para transacciones recurrentes');
+
     const total = units * price;
+    const proximaFecha = recurrente ? calcularProximaFecha(date || transaccion.date, frecuencia) : null;
     const cuentaIdAnterior = transaccion.cuentaId;
 
-    await transaccion.update({ ...req.body, total });
+    await transaccion.update({ ...req.body, total, proximaFecha });
 
     const cuentaIdNuevo = transaccion.cuentaId;
     if (cuentaIdAnterior) await recalcularBalance(cuentaIdAnterior);
@@ -102,10 +126,58 @@ export const eliminarTransaccion = async (req, res, next) => {
     }
 
     const cuentaId = transaccion.cuentaId;
+    const { modo } = req.query;
+
+    // Si es recurrente o copia generada y se pide cancelar la recurrencia
+    if (modo === 'cancelar') {
+      const plantillaId = transaccion.recurrente ? transaccion.id : transaccion.recurrenciaId;
+      if (plantillaId) {
+        await Transaccion.update({ recurrente: false, proximaFecha: null }, { where: { id: plantillaId } });
+      }
+    }
+
     await transaccion.destroy();
     if (cuentaId) await recalcularBalance(cuentaId);
 
     res.json({ mensaje: 'Transacción eliminada' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generarRecurrentes = async (req, res, next) => {
+  try {
+    const ahora = new Date();
+    ahora.setHours(23, 59, 59, 999);
+
+    const plantillas = await Transaccion.findAll({
+      where: {
+        userId: req.user.id,
+        recurrente: true,
+        proximaFecha: { [Op.lte]: ahora },
+      },
+    });
+
+    let generadas = 0;
+    for (const p of plantillas) {
+      const { id, recurrenciaId, recurrente, proximaFecha, frecuencia, createdAt, updatedAt, ...datos } = p.toJSON();
+
+      await Transaccion.create({
+        ...datos,
+        date: proximaFecha,
+        recurrente: false,
+        recurrenciaId: id,
+        proximaFecha: null,
+        frecuencia: null,
+      });
+
+      await p.update({ proximaFecha: calcularProximaFecha(proximaFecha, frecuencia) });
+
+      if (datos.cuentaId) await recalcularBalance(datos.cuentaId);
+      generadas++;
+    }
+
+    res.json({ generadas });
   } catch (error) {
     next(error);
   }

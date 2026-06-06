@@ -14,6 +14,10 @@ export const TransaccionModel = (sequelize) => {
     groupId:       { type: DataTypes.INTEGER, allowNull: true },  // legacy
     cuentaId:      { type: DataTypes.INTEGER, allowNull: true },
     userId:        { type: DataTypes.INTEGER, allowNull: true },
-    traspasoParId: { type: DataTypes.INTEGER, allowNull: true },
+    traspasoParId:  { type: DataTypes.INTEGER, allowNull: true },
+    recurrente:     { type: DataTypes.BOOLEAN, defaultValue: false },
+    frecuencia:     { type: DataTypes.ENUM('diario','semanal','mensual','anual'), allowNull: true },
+    proximaFecha:   { type: DataTypes.DATE, allowNull: true },
+    recurrenciaId:  { type: DataTypes.INTEGER, allowNull: true },
   });
 };

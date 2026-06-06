@@ -8,7 +8,8 @@ import {
   obtenerTransaccion,
   actualizarTransaccion,
   eliminarTransaccion,
-  importarTransacciones
+  importarTransacciones,
+  generarRecurrentes,
 } from '../controllers/transaccionesController.js';
 
 const router = express.Router();
@@ -21,5 +22,6 @@ router.get('/:id', obtenerTransaccion);
 router.put('/:id', actualizarTransaccion);
 router.delete('/:id', eliminarTransaccion);
 router.post('/import', upload.single('file'), importarTransacciones);
+router.post('/generar-recurrentes', generarRecurrentes);
 
 export default router;
