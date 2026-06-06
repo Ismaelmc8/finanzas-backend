@@ -7,12 +7,13 @@ export const TransaccionModel = (sequelize) => {
     units:    { type: DataTypes.FLOAT },
     price:    { type: DataTypes.FLOAT },
     total:    { type: DataTypes.FLOAT },
-    type:     { type: DataTypes.ENUM("ingreso", "gasto") },
-    category: { type: DataTypes.STRING },
-    date:     { type: DataTypes.DATE },
-    notes:    { type: DataTypes.TEXT },
-    groupId:  { type: DataTypes.INTEGER, allowNull: true },  // legacy
-    cuentaId: { type: DataTypes.INTEGER, allowNull: true },
-    userId:   { type: DataTypes.INTEGER, allowNull: true },
+    type:          { type: DataTypes.ENUM("ingreso", "gasto", "traspaso") },
+    category:      { type: DataTypes.STRING },
+    date:          { type: DataTypes.DATE },
+    notes:         { type: DataTypes.TEXT },
+    groupId:       { type: DataTypes.INTEGER, allowNull: true },  // legacy
+    cuentaId:      { type: DataTypes.INTEGER, allowNull: true },
+    userId:        { type: DataTypes.INTEGER, allowNull: true },
+    traspasoParId: { type: DataTypes.INTEGER, allowNull: true },
   });
 };

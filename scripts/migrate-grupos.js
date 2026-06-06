@@ -8,7 +8,7 @@ dotenv.config();
 
 async function migrar() {
   await sequelize.authenticate();
-  await sequelize.sync();
+  await sequelize.sync({ alter: true });  // añade columnas nuevas sin borrar datos
 
   const usuarios = await Usuario.findAll();
   if (!usuarios.length) {

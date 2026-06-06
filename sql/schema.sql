@@ -80,25 +80,29 @@ CREATE TABLE IF NOT EXISTS `cuentas` (
 
 -- -------------------------------------------------------------
 -- 5. Transaccions
---    · cuentaId  → cuenta propietaria (nuevo)
---    · groupId   → Grupo legacy (nullable)
---    · userId    → desnormalizado para queries rápidas
+--    · type='traspaso'  → movimiento interno entre cuentas
+--    · traspasoParId    → enlaza el par de transacciones de un traspaso
+--                         (ambas apuntan al id de la transacción saliente)
+--    · cuentaId         → cuenta propietaria (nuevo)
+--    · groupId          → Grupo legacy (nullable)
+--    · userId           → desnormalizado para queries rápidas
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `Transaccions` (
-  `id`          INT           NOT NULL AUTO_INCREMENT,
-  `name`        VARCHAR(255)           DEFAULT NULL,
-  `units`       FLOAT                  DEFAULT NULL,
-  `price`       FLOAT                  DEFAULT NULL,
-  `total`       FLOAT                  DEFAULT NULL,
-  `type`        ENUM('ingreso','gasto') DEFAULT NULL,
-  `category`    VARCHAR(255)           DEFAULT NULL,
-  `date`        DATETIME               DEFAULT NULL,
-  `notes`       TEXT                   DEFAULT NULL,
-  `groupId`     INT                    DEFAULT NULL,
-  `cuentaId`    INT                    DEFAULT NULL,
-  `userId`      INT                    DEFAULT NULL,
-  `createdAt`   DATETIME      NOT NULL,
-  `updatedAt`   DATETIME      NOT NULL,
+  `id`            INT             NOT NULL AUTO_INCREMENT,
+  `name`          VARCHAR(255)             DEFAULT NULL,
+  `units`         FLOAT                    DEFAULT NULL,
+  `price`         FLOAT                    DEFAULT NULL,
+  `total`         FLOAT                    DEFAULT NULL,
+  `type`          ENUM('ingreso','gasto','traspaso') DEFAULT NULL,
+  `category`      VARCHAR(255)             DEFAULT NULL,
+  `date`          DATETIME                 DEFAULT NULL,
+  `notes`         TEXT                     DEFAULT NULL,
+  `groupId`       INT                      DEFAULT NULL,
+  `cuentaId`      INT                      DEFAULT NULL,
+  `userId`        INT                      DEFAULT NULL,
+  `traspasoParId` INT                      DEFAULT NULL,
+  `createdAt`     DATETIME        NOT NULL,
+  `updatedAt`     DATETIME        NOT NULL,
   PRIMARY KEY (`id`),
   CONSTRAINT `fk_transaccions_cuenta`
     FOREIGN KEY (`cuentaId`) REFERENCES `cuentas` (`id`)
@@ -109,4 +113,29 @@ CREATE TABLE IF NOT EXISTS `Transaccions` (
   CONSTRAINT `fk_transaccions_usuario`
     FOREIGN KEY (`userId`) REFERENCES `usuarios` (`id`)
     ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------------
+-- 6. refresh_tokens  (EV-09)
+--    · tokenHash   → SHA-256 del token, nunca texto plano
+--    · revokedAt   → NULL = activo, fecha = revocado (blacklist)
+--    · Rotación    → en cada uso se revoca el actual y se emite uno nuevo
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `refresh_tokens` (
+  `id`          INT           NOT NULL AUTO_INCREMENT,
+  `tokenHash`   VARCHAR(64)   NOT NULL,
+  `userId`      INT           NOT NULL,
+  `expiresAt`   DATETIME      NOT NULL,
+  `revokedAt`   DATETIME               DEFAULT NULL,
+  `userAgent`   VARCHAR(500)           DEFAULT NULL,
+  `ip`          VARCHAR(45)            DEFAULT NULL,
+  `lastUsedAt`  DATETIME               DEFAULT NULL,
+  `createdAt`   DATETIME      NOT NULL,
+  `updatedAt`   DATETIME      NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_refresh_tokens_hash` (`tokenHash`),
+  KEY `idx_refresh_tokens_userId` (`userId`),
+  CONSTRAINT `fk_refresh_tokens_usuario`
+    FOREIGN KEY (`userId`) REFERENCES `usuarios` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

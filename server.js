@@ -8,6 +8,7 @@ import authRoutes from './routes/authentication.js';
 import gruposRoutes from "./routes/grupos.js";
 import bancosRoutes from "./routes/bancos.js";
 import cuentasRoutes from "./routes/cuentas.js";
+import traspasosRoutes from "./routes/traspasos.js";
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -31,13 +32,14 @@ app.use('/expenses', transaccionesRoutes);
 app.use("/groups-expenses", gruposRoutes);
 app.use("/bancos", bancosRoutes);
 app.use("/cuentas", cuentasRoutes);
+app.use("/traspasos", traspasosRoutes);
 
 app.use(errorHandler);
 
 sequelize.authenticate()
     .then(() => {
         console.log('Conectado a MySQL con Sequelize');
-        return sequelize.sync();
+        return sequelize.sync({ alter: true });
     })
     .then(() => {
         app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));

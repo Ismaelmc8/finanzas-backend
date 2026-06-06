@@ -3,9 +3,10 @@ import { NotFoundError, ForbiddenError, ValidationError } from "../errors/index.
 import { Op } from "sequelize";
 
 export const recalcularBalance = async (cuentaId) => {
-  const ingresos = await Transaccion.sum("total", { where: { cuentaId, type: "ingreso" } }) || 0;
-  const gastos   = await Transaccion.sum("total", { where: { cuentaId, type: "gasto" } }) || 0;
-  await Cuenta.update({ balance: ingresos - gastos }, { where: { id: cuentaId } });
+  const ingresos  = await Transaccion.sum("total", { where: { cuentaId, type: "ingreso"  } }) || 0;
+  const gastos    = await Transaccion.sum("total", { where: { cuentaId, type: "gasto"    } }) || 0;
+  const traspasos = await Transaccion.sum("total", { where: { cuentaId, type: "traspaso" } }) || 0;
+  await Cuenta.update({ balance: ingresos - gastos + traspasos }, { where: { id: cuentaId } });
 };
 
 export const crearCuenta = async (req, res, next) => {
