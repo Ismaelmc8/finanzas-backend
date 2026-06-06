@@ -1,5 +1,7 @@
+import { Op } from "sequelize";
 import { Cuenta, Banco, Transaccion, CuentaAcceso, Usuario } from "../models/Loader.js";
 import { NotFoundError, ForbiddenError, ValidationError } from "../errors/index.js";
+import { generarExcel, generarCSV } from "../services/excelExportService.js";
 
 // ─── Helper compartido ────────────────────────────────────────────────────────
 // Verifica que userId tiene acceso a la cuenta con el rol mínimo requerido.
@@ -110,5 +112,44 @@ export const eliminarCuenta = async (req, res, next) => {
 
     await cuenta.destroy();
     res.json({ mensaje: "Cuenta eliminada" });
+  } catch (err) { next(err); }
+};
+
+export const exportarTransacciones = async (req, res, next) => {
+  try {
+    const { cuentaId } = req.params;
+    const { format = "csv", from, to, categoria, type } = req.query;
+
+    const { cuenta } = await verificarAccesoCuenta(req.user.id, cuentaId, "lector");
+
+    const where = { cuentaId };
+    if (from || to) {
+      where.date = {};
+      if (from) where.date[Op.gte] = new Date(from);
+      if (to)   where.date[Op.lte] = new Date(to + "T23:59:59");
+    }
+    if (categoria) where.category = categoria;
+    if (type)      where.type = type;
+
+    const transacciones = await Transaccion.findAll({
+      where,
+      order: [["date", "DESC"]],
+    });
+
+    const slug      = cuenta.nombre.replace(/\s+/g, "-").toLowerCase();
+    const fechaHoy  = new Date().toISOString().split("T")[0];
+    const nombreBase = `movimientos-${slug}-${fechaHoy}`;
+
+    if (format === "xlsx") {
+      const buffer = generarExcel(transacciones);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="${nombreBase}.xlsx"`);
+      res.send(buffer);
+    } else {
+      const csv = generarCSV(transacciones);
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${nombreBase}.csv"`);
+      res.send(csv);
+    }
   } catch (err) { next(err); }
 };

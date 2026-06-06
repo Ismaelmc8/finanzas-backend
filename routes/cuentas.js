@@ -1,6 +1,6 @@
 import express from "express";
 import { authMiddleware } from "../middleware/authMiddleware.js";
-import { crearCuenta, obtenerCuentas, obtenerCuenta, actualizarCuenta, eliminarCuenta } from "../controllers/cuentasController.js";
+import { crearCuenta, obtenerCuentas, obtenerCuenta, actualizarCuenta, eliminarCuenta, exportarTransacciones } from "../controllers/cuentasController.js";
 import { listarAccesos, invitarUsuario, cambiarRol, revocarAcceso } from "../controllers/accesosController.js";
 
 const router = express.Router();
@@ -12,6 +12,9 @@ router.post("/",   crearCuenta);
 router.get("/:id", obtenerCuenta);
 router.put("/:id", actualizarCuenta);
 router.delete("/:id", eliminarCuenta);
+
+// Exportación
+router.get("/:cuentaId/export", exportarTransacciones);
 
 // Accesos compartidos (subrutas de una cuenta)
 router.get("/:cuentaId/accesos",              listarAccesos);
