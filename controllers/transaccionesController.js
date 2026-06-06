@@ -5,29 +5,31 @@ import fs from 'fs';
 import { procesarExcelTransacciones } from '../services/excelImportService.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../errors/index.js';
 
-function calcularProximaFecha(date, frecuencia) {
+function calcularProximaFecha(date, frecuenciaValor, frecuenciaUnidad) {
   const d = new Date(date);
-  switch (frecuencia) {
-    case 'diario':  d.setDate(d.getDate() + 1);          break;
-    case 'semanal': d.setDate(d.getDate() + 7);          break;
-    case 'mensual': d.setMonth(d.getMonth() + 1);        break;
-    case 'anual':   d.setFullYear(d.getFullYear() + 1);  break;
+  const v = frecuenciaValor || 1;
+  switch (frecuenciaUnidad) {
+    case 'dia': d.setDate(d.getDate() + v);           break;
+    case 'mes': d.setMonth(d.getMonth() + v);         break;
+    case 'año': d.setFullYear(d.getFullYear() + v);   break;
   }
   return d;
 }
 
 export const crearTransaccion = async (req, res, next) => {
   try {
-    const { units, price, cuentaId, recurrente, frecuencia, date } = req.body;
+    const { units, price, cuentaId, recurrente, frecuenciaValor, frecuenciaUnidad, date } = req.body;
 
-    if (recurrente && !frecuencia) throw new ValidationError('La frecuencia es obligatoria para transacciones recurrentes');
+    if (recurrente && (!frecuenciaValor || !frecuenciaUnidad)) {
+      throw new ValidationError('frecuenciaValor y frecuenciaUnidad son obligatorios para transacciones recurrentes');
+    }
 
     if (cuentaId) {
       await verificarAccesoCuenta(req.user.id, cuentaId, 'editor');
     }
 
     const total = units * price;
-    const proximaFecha = recurrente ? calcularProximaFecha(date, frecuencia) : null;
+    const proximaFecha = recurrente ? calcularProximaFecha(date, frecuenciaValor, frecuenciaUnidad) : null;
 
     const nueva = await Transaccion.create({
       ...req.body,
@@ -94,12 +96,16 @@ export const actualizarTransaccion = async (req, res, next) => {
       throw new ForbiddenError();
     }
 
-    const { units, price, recurrente, frecuencia, date } = req.body;
+    const { units, price, recurrente, frecuenciaValor, frecuenciaUnidad, date } = req.body;
 
-    if (recurrente && !frecuencia) throw new ValidationError('La frecuencia es obligatoria para transacciones recurrentes');
+    if (recurrente && (!frecuenciaValor || !frecuenciaUnidad)) {
+      throw new ValidationError('frecuenciaValor y frecuenciaUnidad son obligatorios para transacciones recurrentes');
+    }
 
     const total = units * price;
-    const proximaFecha = recurrente ? calcularProximaFecha(date || transaccion.date, frecuencia) : null;
+    const proximaFecha = recurrente
+      ? calcularProximaFecha(date || transaccion.date, frecuenciaValor, frecuenciaUnidad)
+      : null;
     const cuentaIdAnterior = transaccion.cuentaId;
 
     await transaccion.update({ ...req.body, total, proximaFecha });
@@ -160,7 +166,7 @@ export const generarRecurrentes = async (req, res, next) => {
 
     let generadas = 0;
     for (const p of plantillas) {
-      const { id, recurrenciaId, recurrente, proximaFecha, frecuencia, createdAt, updatedAt, ...datos } = p.toJSON();
+      const { id, recurrenciaId, recurrente, proximaFecha, frecuenciaValor, frecuenciaUnidad, createdAt, updatedAt, ...datos } = p.toJSON();
 
       await Transaccion.create({
         ...datos,
@@ -168,10 +174,11 @@ export const generarRecurrentes = async (req, res, next) => {
         recurrente: false,
         recurrenciaId: id,
         proximaFecha: null,
-        frecuencia: null,
+        frecuenciaValor: null,
+        frecuenciaUnidad: null,
       });
 
-      await p.update({ proximaFecha: calcularProximaFecha(proximaFecha, frecuencia) });
+      await p.update({ proximaFecha: calcularProximaFecha(proximaFecha, frecuenciaValor, frecuenciaUnidad) });
 
       if (datos.cuentaId) await recalcularBalance(datos.cuentaId);
       generadas++;
