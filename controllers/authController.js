@@ -3,9 +3,19 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { Op } from "sequelize";
 import Usuario from "../models/Usuario.js";
-import { RefreshToken, Categoria } from "../models/Loader.js";
+import { RefreshToken, Categoria, ReglaCategorizacion } from "../models/Loader.js";
 import { CATEGORIAS_DEFAULT } from "../data/categorias-default.js";
+import { REGLAS_DEFAULT }     from "../data/reglas-default.js";
 import { ValidationError, UnauthorizedError, NotFoundError } from "../errors/index.js";
+
+export const seedReglas = async (userId) => {
+  const cats = await Categoria.findAll({ where: { userId }, attributes: ["id", "nombre"] });
+  const mapaCategoria = Object.fromEntries(cats.map(c => [c.nombre, c.id]));
+  const reglas = REGLAS_DEFAULT
+    .filter(r => mapaCategoria[r.categoria])
+    .map(r => ({ userId, patron: r.patron, categoriaId: mapaCategoria[r.categoria] }));
+  if (reglas.length) await ReglaCategorizacion.bulkCreate(reglas);
+};
 
 export const seedCategorias = async (userId) => {
   for (const def of CATEGORIAS_DEFAULT) {
@@ -72,6 +82,7 @@ export const register = async (req, res, next) => {
     const usuario = await Usuario.create({ nombre, email, password_hash });
 
     await seedCategorias(usuario.id);
+    await seedReglas(usuario.id);
 
     res.status(201).json({
       mensaje: "Usuario registrado con éxito",

@@ -14,6 +14,7 @@ import invitacionesRoutes from "./routes/invitaciones.js";
 import categoriasRoutes   from "./routes/categorias.js";
 import presupuestosRoutes from "./routes/presupuestos.js";
 import dashboardRoutes    from "./routes/dashboard.js";
+import reglasRoutes      from "./routes/reglas.js";
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -44,13 +45,14 @@ app.use("/invitaciones", invitacionesRoutes);
 app.use("/categorias",   categoriasRoutes);
 app.use("/presupuestos", presupuestosRoutes);
 app.use("/dashboard",    dashboardRoutes);
+app.use("/reglas",       reglasRoutes);
 
 app.use(errorHandler);
 
 sequelize.authenticate()
     .then(() => {
         console.log('Conectado a MySQL con Sequelize');
-        return sequelize.sync({ alter: true });
+        return sequelize.sync({ alter: { drop: false } });
     })
     .then(() => {
         app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));

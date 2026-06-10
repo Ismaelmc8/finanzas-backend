@@ -28,21 +28,24 @@ export const verificarAccesoCuenta = async (userId, cuentaId, rolMinimo = "lecto
 
 // ─── Balance ──────────────────────────────────────────────────────────────────
 export const recalcularBalance = async (cuentaId) => {
+  const cuenta    = await Cuenta.findByPk(cuentaId, { attributes: ["saldoInicial"] });
+  const base      = cuenta?.saldoInicial || 0;
   const ingresos  = await Transaccion.sum("total", { where: { cuentaId, type: "ingreso"  } }) || 0;
   const gastos    = await Transaccion.sum("total", { where: { cuentaId, type: "gasto"    } }) || 0;
   const traspasos = await Transaccion.sum("total", { where: { cuentaId, type: "traspaso" } }) || 0;
-  await Cuenta.update({ balance: ingresos - gastos + traspasos }, { where: { id: cuentaId } });
+  await Cuenta.update({ balance: base + ingresos - gastos + traspasos }, { where: { id: cuentaId } });
 };
 
 // ─── CRUD cuentas ─────────────────────────────────────────────────────────────
 export const crearCuenta = async (req, res, next) => {
   try {
-    const { nombre, tipo, moneda, bancoId } = req.body;
+    const { nombre, tipo, moneda, bancoId, saldoInicial } = req.body;
     const banco = await Banco.findByPk(bancoId);
     if (!banco) throw new NotFoundError("Banco no encontrado");
     if (banco.userId !== req.user.id) throw new ForbiddenError();
 
-    const cuenta = await Cuenta.create({ nombre, tipo, moneda, bancoId, userId: req.user.id });
+    const base   = saldoInicial ? Number(saldoInicial) : 0;
+    const cuenta = await Cuenta.create({ nombre, tipo, moneda, bancoId, userId: req.user.id, saldoInicial: base, balance: base });
     res.status(201).json(cuenta);
   } catch (err) { next(err); }
 };
@@ -98,8 +101,10 @@ export const actualizarCuenta = async (req, res, next) => {
     if (!cuenta) throw new NotFoundError("Cuenta no encontrada");
     if (cuenta.userId !== req.user.id) throw new ForbiddenError();
 
-    const { nombre, tipo, moneda, activa } = req.body;
-    await cuenta.update({ nombre, tipo, moneda, activa });
+    const { nombre, tipo, moneda, activa, saldoInicial } = req.body;
+    await cuenta.update({ nombre, tipo, moneda, activa, ...(saldoInicial !== undefined && { saldoInicial: Number(saldoInicial) }) });
+    await recalcularBalance(cuenta.id);
+    await cuenta.reload();
     res.json(cuenta);
   } catch (err) { next(err); }
 };

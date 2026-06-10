@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Transaccion, Cuenta } from '../models/Loader.js';
+import { Transaccion, Cuenta, ReglaCategorizacion, Categoria } from '../models/Loader.js';
 import { recalcularBalance, verificarAccesoCuenta } from './cuentasController.js';
 import fs from 'fs';
 import { procesarExcelTransacciones } from '../services/excelImportService.js';
@@ -200,16 +200,59 @@ export const importarTransacciones = async (req, res, next) => {
       await verificarAccesoCuenta(req.user.id, cuentaId, 'editor');
     }
 
-    const transacciones = procesarExcelTransacciones(req.file.path);
-    if (!transacciones.length) throw new ValidationError('El archivo está vacío');
+    let transacciones;
+    try {
+      transacciones = procesarExcelTransacciones(req.file.path);
+    } catch (parseErr) {
+      throw new ValidationError(parseErr.message);
+    }
+    if (!transacciones.length) throw new ValidationError('El archivo no contiene filas de datos válidas');
 
-    const data = transacciones.map(t => ({ ...t, userId: req.user.id, cuentaId: cuentaId || null }));
-    await Transaccion.bulkCreate(data);
+    // Cargar reglas del usuario para auto-categorización
+    const reglas = await ReglaCategorizacion.findAll({
+      where: { userId: req.user.id },
+      include: [{ model: Categoria, as: "categoria", attributes: ["nombre"] }],
+    });
+
+    const aplicarReglas = (concepto) => {
+      if (!concepto) return null;
+      const upper = concepto.toUpperCase();
+      const match = reglas.find(r => upper.includes(r.patron));
+      return match ? match.categoria.nombre : null;
+    };
+
+    const data = transacciones.map(t => ({
+      ...t,
+      category: t.category || aplicarReglas(t.name),
+      userId: req.user.id,
+      cuentaId: cuentaId || null,
+    }));
+
+    // Detectar duplicados: misma fecha (día) + nombre + total en la misma cuenta
+    const existentes = await Transaccion.findAll({
+      where: { userId: req.user.id, ...(cuentaId ? { cuentaId } : {}) },
+      attributes: ['date', 'name', 'total'],
+    });
+    const claves = new Set(
+      existentes.map(t => `${new Date(t.date).toDateString()}|${(t.name || '').trim().toLowerCase()}|${t.total}`)
+    );
+    const nuevas     = data.filter(t => !claves.has(`${new Date(t.date).toDateString()}|${(t.name || '').trim().toLowerCase()}|${t.total}`));
+    const duplicadas = data.length - nuevas.length;
+
+    if (!nuevas.length) throw new ValidationError('Todas las transacciones del archivo ya estaban importadas');
+
+    await Transaccion.bulkCreate(nuevas);
     fs.unlinkSync(req.file.path);
 
     if (cuentaId) await recalcularBalance(cuentaId);
 
-    res.json({ mensaje: 'Importación completada', totalImportadas: transacciones.length });
+    const categorizadas = nuevas.filter(t => t.category).length;
+    res.json({
+      mensaje: 'Importación completada',
+      totalImportadas: nuevas.length,
+      duplicadas,
+      categorizadas,
+    });
   } catch (error) {
     if (req.file) fs.unlink(req.file.path, () => {});
     next(error);

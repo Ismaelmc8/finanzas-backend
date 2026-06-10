@@ -21,12 +21,20 @@ export const getDashboard = async (req, res, next) => {
     const userId = req.user.id;
     const ahora  = new Date();
 
+    // Mes/año solicitado (defecto: mes actual)
+    const mesSel = req.query.mes ? parseInt(req.query.mes, 10) - 1 : ahora.getMonth();
+    const añoSel = req.query.año ? parseInt(req.query.año, 10)     : ahora.getFullYear();
+
+    // Mes anterior al seleccionado (maneja cambio de año)
+    const mesAnt = mesSel === 0 ? 11 : mesSel - 1;
+    const añoAnt = mesSel === 0 ? añoSel - 1 : añoSel;
+
     // Rangos de fechas
-    const inicioMesActual   = new Date(ahora.getFullYear(), ahora.getMonth(),     1);
-    const finMesActual      = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59);
-    const inicioMesAnterior = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1);
-    const finMesAnterior    = new Date(ahora.getFullYear(), ahora.getMonth(),     0, 23, 59, 59);
-    const inicioSeisMeses   = new Date(ahora.getFullYear(), ahora.getMonth() - 5, 1);
+    const inicioMesActual   = new Date(añoSel, mesSel,     1);
+    const finMesActual      = new Date(añoSel, mesSel + 1, 0, 23, 59, 59);
+    const inicioMesAnterior = new Date(añoAnt, mesAnt,     1);
+    const finMesAnterior    = new Date(añoAnt, mesAnt + 1, 0, 23, 59, 59);
+    const inicioSeisMeses   = new Date(añoSel, mesSel - 5, 1);
 
     // ── Cuentas propias ──────────────────────────────────────────────────────
     const cuentas = await Cuenta.findAll({
@@ -69,8 +77,9 @@ export const getDashboard = async (req, res, next) => {
       gastosPorCatMap[cat] = (gastosPorCatMap[cat] || 0) + t.total;
     });
 
-    const categorias = await Categoria.findAll({ where: { userId }, attributes: ["nombre", "color"] });
+    const categorias = await Categoria.findAll({ where: { userId }, attributes: ["nombre", "color", "icono"] });
     const colorMap   = Object.fromEntries(categorias.map(c => [c.nombre, c.color]));
+    const iconoMap   = Object.fromEntries(categorias.map(c => [c.nombre, c.icono]));
 
     const gastosPorCategoria = Object.entries(gastosPorCatMap)
       .map(([categoria, total]) => ({
@@ -92,7 +101,7 @@ export const getDashboard = async (req, res, next) => {
     });
 
     const evolucionMensual = Array.from({ length: 6 }, (_, i) => {
-      const d   = new Date(ahora.getFullYear(), ahora.getMonth() - (5 - i), 1);
+      const d   = new Date(añoSel, mesSel - (5 - i), 1);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       const datos = evMap[key] || { ingresos: 0, gastos: 0 };
       return {
@@ -100,6 +109,16 @@ export const getDashboard = async (req, res, next) => {
         ingresos: Math.round(datos.ingresos * 100) / 100,
         gastos:   Math.round(datos.gastos   * 100) / 100,
       };
+    });
+
+    // ── Movimientos recientes (últimos 5 del mes seleccionado) ──────────────
+    const movimientosRecientes = await Transaccion.findAll({
+      where: {
+        userId,
+        date: { [Op.between]: [inicioMesActual, finMesActual] },
+      },
+      order: [["date", "DESC"]],
+      limit: 5,
     });
 
     // ── Presupuestos en alerta (≥ 80 %) ─────────────────────────────────────
@@ -139,6 +158,17 @@ export const getDashboard = async (req, res, next) => {
       patrimonioTotal,
       mesActual,
       mesAnterior,
+      movimientosRecientes: movimientosRecientes.map(t => ({
+        id:       t.id,
+        concepto: t.name,
+        total:    t.total,
+        fecha:    t.date,
+        type:     t.type,
+        categoria: t.category,
+        color:    colorMap[t.category] || "#6366f1",
+        icono:    iconoMap[t.category] || "📦",
+        cuentaId: t.cuentaId,
+      })),
       diferencias,
       gastosPorCategoria,
       evolucionMensual,

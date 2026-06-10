@@ -40,11 +40,19 @@ export const CATEGORIAS_DEFAULT = [
   {
     nombre: "Ocio", tipo: "gasto", color: "#8b5cf6", icono: "🎮",
     subcategorias: [
-      { nombre: "Streaming",     tipo: "gasto", color: "#a78bfa", icono: "📺" },
       { nombre: "Cine / Teatro", tipo: "gasto", color: "#a78bfa", icono: "🎬" },
       { nombre: "Viajes",        tipo: "gasto", color: "#a78bfa", icono: "✈️" },
       { nombre: "Hobbies",       tipo: "gasto", color: "#a78bfa", icono: "🎨" },
       { nombre: "Deporte",       tipo: "gasto", color: "#a78bfa", icono: "⚽" },
+    ],
+  },
+  {
+    nombre: "Suscripciones", tipo: "gasto", color: "#06b6d4", icono: "📱",
+    subcategorias: [
+      { nombre: "Streaming video", tipo: "gasto", color: "#22d3ee", icono: "📺" },
+      { nombre: "Música",          tipo: "gasto", color: "#22d3ee", icono: "🎵" },
+      { nombre: "Software / Apps", tipo: "gasto", color: "#22d3ee", icono: "🖥️" },
+      { nombre: "Gaming",          tipo: "gasto", color: "#22d3ee", icono: "🎮" },
     ],
   },
   {
